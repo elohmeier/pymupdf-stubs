@@ -426,7 +426,7 @@ class Page:
     ) -> str | list | dict: ...
     def find_tables(
         self,
-        clip: Rect | None = None,
+        clip: Rect | IRect | tuple[float | int, float | int, float | int, float | int] | list[float | int] | None = None,
         strategy: str | None = None,
         vertical_strategy: str | None = None,
         horizontal_strategy: str | None = None,
