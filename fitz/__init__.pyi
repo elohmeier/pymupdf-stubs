@@ -259,6 +259,74 @@ ExtractImageDict = TypedDict(
     },
 )
 
+class TextCharDict(TypedDict):
+    origin: tuple[float, float]
+    bbox: tuple[float, float, float, float]
+    c: str
+    synthetic: bool
+
+class TextSpanDict(TypedDict):
+    size: float
+    flags: int
+    bidi: int
+    char_flags: int
+    font: str
+    color: int
+    alpha: int
+    ascender: float
+    descender: float
+    text: str
+    origin: tuple[float, float]
+    bbox: tuple[float, float, float, float]
+
+class TextSpanRawDict(TypedDict):
+    size: float
+    flags: int
+    bidi: int
+    char_flags: int
+    font: str
+    color: int
+    alpha: int
+    ascender: float
+    descender: float
+    chars: list[TextCharDict]
+    origin: tuple[float, float]
+    bbox: tuple[float, float, float, float]
+
+class TextLineDict(TypedDict):
+    spans: list[TextSpanDict]
+    wmode: int
+    dir: tuple[float, float]
+    bbox: tuple[float, float, float, float]
+
+class TextLineRawDict(TypedDict):
+    spans: list[TextSpanRawDict]
+    wmode: int
+    dir: tuple[float, float]
+    bbox: tuple[float, float, float, float]
+
+class TextBlockDict(TypedDict):
+    number: int
+    type: int
+    bbox: tuple[float, float, float, float]
+    lines: list[TextLineDict]
+
+class TextBlockRawDict(TypedDict):
+    number: int
+    type: int
+    bbox: tuple[float, float, float, float]
+    lines: list[TextLineRawDict]
+
+class TextPageDict(TypedDict):
+    width: float
+    height: float
+    blocks: list[TextBlockDict]
+
+class TextPageRawDict(TypedDict):
+    width: float
+    height: float
+    blocks: list[TextBlockRawDict]
+
 # https://pymupdf.readthedocs.io/en/latest/how-to-open-a-file.html#how-to-open-a-file
 def open(
     filename: str | Path | BufferedReader | None = None,
@@ -387,7 +455,28 @@ class Document:
 class Annot: ...
 
 class TextPage:
-    def extractWORDS(self): ...
+    def extractText(self, sort: bool = False) -> str: ...
+    def extractTEXT(self, sort: bool = False) -> str: ...
+    def extractBLOCKS(
+        self,
+    ) -> list[tuple[float, float, float, float, str, int, int]]: ...
+    def extractWORDS(
+        self, delimiters: str | None = None
+    ) -> list[tuple[float, float, float, float, str, int, int, int]]: ...
+    def extractHTML(self) -> str: ...
+    def extractDICT(self, sort: bool = False) -> TextPageDict: ...
+    def extractJSON(self, sort: bool = False) -> str: ...
+    def extractXHTML(self) -> str: ...
+    def extractXML(self) -> str: ...
+    def extractRAWDICT(self, sort: bool = False) -> TextPageRawDict: ...
+    def extractRAWJSON(self, sort: bool = False) -> str: ...
+    @overload
+    def search(self, needle: str, quads: Literal[False] = False) -> list[Rect]: ...
+    @overload
+    def search(self, needle: str, quads: Literal[True]) -> list[Quad]: ...
+    def search(self, needle: str, quads: bool = False) -> list[Rect | Quad]: ...
+    @property
+    def rect(self) -> Rect: ...
 
 class Page:
     def get_pixmap(
@@ -426,7 +515,11 @@ class Page:
     ) -> str | list | dict: ...
     def find_tables(
         self,
-        clip: Rect | IRect | tuple[float | int, float | int, float | int, float | int] | list[float | int] | None = None,
+        clip: Rect
+        | IRect
+        | tuple[float | int, float | int, float | int, float | int]
+        | list[float | int]
+        | None = None,
         strategy: str | None = None,
         vertical_strategy: str = "lines",
         horizontal_strategy: str = "lines",
