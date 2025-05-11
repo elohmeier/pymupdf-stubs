@@ -14,19 +14,41 @@ increment_version() {
     local minor=$2
     local hotfix=$3
 
-    IFS='.' read -r major minor_ver patch <<<"$version"
+    # Check if version has a -x suffix
+    if [[ "$version" =~ ^([0-9]+\.[0-9]+\.[0-9]+)-([0-9]+)$ ]]; then
+        base_version="${BASH_REMATCH[1]}"
+        release_num="${BASH_REMATCH[2]}"
 
-    if [ "$minor" -eq 1 ]; then
-        minor_ver=$((minor_ver + 1))
-        patch=0
-    elif [ "$hotfix" -eq 1 ]; then
-        patch=$((patch + 1))
+        if [ "$minor" -eq 1 ]; then
+            IFS='.' read -r major minor_ver patch <<<"$base_version"
+            minor_ver=$((minor_ver + 1))
+            patch=0
+            echo "${major}.${minor_ver}.${patch}-1"
+        elif [ "$hotfix" -eq 1 ]; then
+            IFS='.' read -r major minor_ver patch <<<"$base_version"
+            patch=$((patch + 1))
+            echo "${major}.${minor_ver}.${patch}-1"
+        else
+            # Default: increment the release number
+            new_release=$((release_num + 1))
+            echo "${base_version}-${new_release}"
+        fi
     else
-        echo "Either --minor or --hotfix must be specified when no version is provided"
-        exit 1
-    fi
+        # Handle regular version format without -x suffix
+        IFS='.' read -r major minor_ver patch <<<"$version"
 
-    echo "${major}.${minor_ver}.${patch}"
+        if [ "$minor" -eq 1 ]; then
+            minor_ver=$((minor_ver + 1))
+            patch=0
+        elif [ "$hotfix" -eq 1 ]; then
+            patch=$((patch + 1))
+        else
+            echo "Either --minor or --hotfix must be specified when no version is provided"
+            exit 1
+        fi
+
+        echo "${major}.${minor_ver}.${patch}"
+    fi
 }
 
 # Function to get current version from pyproject.toml
