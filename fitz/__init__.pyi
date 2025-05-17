@@ -454,6 +454,22 @@ class Document:
         use_objstms=0,
         compression_effort=0,
     ) -> bytes: ...
+    def scrub(
+        self,
+        attached_files: bool = True,
+        clean_pages: bool = True,
+        embedded_files: bool = True,
+        hidden_text: bool = True,
+        javascript: bool = True,
+        metadata: bool = True,
+        redactions: bool = True,
+        redact_images: int = 0,
+        remove_links: bool = True,
+        reset_fields: bool = True,
+        reset_responses: bool = True,
+        thumbnails: bool = True,
+        xml_metadata: bool = True,
+    ) -> None: ...
 
 class Annot: ...
 
