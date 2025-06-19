@@ -1,0 +1,9 @@
+file: [
+  pymupdf/__init__.pyi,
+  pymupdf/table.pyi,
+]
+
+read: [
+  README.md,
+  pyproject.toml,
+]
