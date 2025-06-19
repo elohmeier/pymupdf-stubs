@@ -150,6 +150,9 @@ update_pyproject_toml() {
 
 set -e
 
+# Get current branch name
+CURRENT_BRANCH=$(git branch --show-current)
+
 # update pyproject.toml
 if update_pyproject_toml; then
     # No changes were made, skip commit
@@ -165,6 +168,11 @@ else
 fi
 git tag -a "$TAG" -m "release $TAG"
 
-git push --atomic origin main "$TAG"
+git push --atomic origin "$CURRENT_BRANCH" "$TAG"
 
-gh release create "$TAG" --latest --verify-tag --generate-notes
+# Only mark as latest release if on main branch
+if [ "$CURRENT_BRANCH" = "main" ]; then
+    gh release create "$TAG" --latest --verify-tag --generate-notes
+else
+    gh release create "$TAG" --verify-tag --generate-notes
+fi
