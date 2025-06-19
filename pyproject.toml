@@ -45,10 +45,12 @@ build-backend = "hatchling.build"
 path = "pyproject.toml:project.version"
 
 [tool.hatch.build]
-packages = ["fitz"]
+packages = ["fitz", "pymupdf"]
 
 [tool.hatch.build.targets.wheel]
 include = [
     "/fitz/*.pyi",
     "/fitz/py.typed",
+    "/pymupdf/*.pyi",
+    "/pymupdf/py.typed",
 ]
