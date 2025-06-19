@@ -807,7 +807,7 @@ class Page:
     ) -> None: ...
     def insert_text(
         self,
-        point: Point,
+        point: Point | tuple[float, float] | list[float],
         text: str,
         *,
         fontsize: float = 11,
