@@ -1,35 +1,40 @@
 [project]
 name = "pymupdf-stubs"
-version = "1.26.1-1"
+version = "1.26.7"
 description = "Type stubs for PyMuPDF (fitz), automatically generated"
 readme = "README.md"
 license = { text = "Apache-2.0" }
-authors = [
-    { name = "Enno Richter", email = "enno@nerdworks.de" }
-]
+authors = [{ name = "Enno Richter", email = "enno@nerdworks.de" }]
 requires-python = ">=3.12"
-dependencies = [
-    "pymupdf>=1.26.1,<1.27.0",
-]
+dependencies = ["pymupdf>=1.26.1,<1.27.0"]
 
 classifiers = [
-    "Development Status :: 4 - Beta",
-    "Intended Audience :: Developers",
-    "License :: OSI Approved :: Apache Software License",
-    "Operating System :: OS Independent",
-    "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.8",
-    "Programming Language :: Python :: 3.9",
-    "Programming Language :: Python :: 3.10",
-    "Programming Language :: Python :: 3.11",
-    "Programming Language :: Python :: 3.12",
-    "Typing :: Stubs Only",
-    "Topic :: Software Development :: Libraries :: Python Modules",
-    "Topic :: Utilities",
-    "Environment :: Console",
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: Apache Software License",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.8",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Typing :: Stubs Only",
+  "Topic :: Software Development :: Libraries :: Python Modules",
+  "Topic :: Utilities",
+  "Environment :: Console",
 ]
 
-keywords = ["pymupdf", "fitz", "pdf", "mupdf", "stubs", "typing", "type hints", "mypy"]
+keywords = [
+  "pymupdf",
+  "fitz",
+  "pdf",
+  "mupdf",
+  "stubs",
+  "typing",
+  "type hints",
+  "mypy",
+]
 
 [project.urls]
 Homepage = "https://github.com/elohmeier/pymupdf-stubs"
@@ -49,8 +54,14 @@ packages = ["fitz", "pymupdf"]
 
 [tool.hatch.build.targets.wheel]
 include = [
-    "/fitz/*.pyi",
-    "/fitz/py.typed",
-    "/pymupdf/*.pyi",
-    "/pymupdf/py.typed",
+  "/fitz/*.pyi",
+  "/fitz/py.typed",
+  "/pymupdf/*.pyi",
+  "/pymupdf/py.typed",
+]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.15.0",
+    "ty>=0.0.15",
 ]

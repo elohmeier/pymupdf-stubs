@@ -4,6 +4,9 @@ def test_old():
     doc = fitz.Document()
     page = doc[0]
     page.draw_rect(fitz.Rect([1, 2, 3, 4]))
+    drawings = page.get_drawings()
+    for drawing in drawings:
+        print(drawing.get("type"))
 
     fdr = page.find_tables()
     tbl = fdr.tables[0]
@@ -16,6 +19,9 @@ def test_new():
     doc = pymupdf.Document()
     page = doc[0]
     page.draw_rect(pymupdf.Rect([1, 2, 3, 4]))
+    drawings: list[pymupdf.DrawingDict] = page.get_drawings()
+    for drawing in drawings:
+        print(drawing.get("type"))
 
     fdr = page.find_tables()
     tbl = fdr.tables[0]

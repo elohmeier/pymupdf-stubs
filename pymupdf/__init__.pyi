@@ -330,6 +330,54 @@ class TextPageRawDict(TypedDict):
     height: float
     blocks: list[TextBlockRawDict]
 
+DrawingLineItem = tuple[Literal["l"], Point, Point]
+DrawingCurveItem = tuple[Literal["c"], Point, Point, Point, Point]
+DrawingRectItem = tuple[Literal["re"], Rect, int]
+DrawingQuadItem = tuple[Literal["qu"], Quad]
+DrawingItem = DrawingLineItem | DrawingCurveItem | DrawingRectItem | DrawingQuadItem
+
+class DrawingPathDict(TypedDict, total=False):
+    type: Literal["f", "s", "fs"]
+    closePath: bool | None
+    color: tuple[float, ...] | None
+    dashes: str | None
+    even_odd: bool | None
+    fill: tuple[float, ...] | None
+    items: list[DrawingItem]
+    lineCap: tuple[int, int, int] | None
+    lineJoin: int | None
+    fill_opacity: float | None
+    stroke_opacity: float | None
+    rect: Rect
+    layer: str | None
+    level: int
+    seqno: int
+    width: float | None
+
+class DrawingClipDict(TypedDict, total=False):
+    type: Literal["clip"]
+    closePath: bool | None
+    even_odd: bool | None
+    items: list[DrawingItem]
+    rect: Rect
+    layer: str | None
+    level: int
+    seqno: int
+    scissor: Rect
+
+class DrawingGroupDict(TypedDict, total=False):
+    type: Literal["group"]
+    rect: Rect
+    layer: str | None
+    level: int
+    seqno: int
+    isolated: bool
+    knockout: bool
+    blendmode: str
+    opacity: float
+
+DrawingDict = DrawingPathDict | DrawingClipDict | DrawingGroupDict
+
 # https://pymupdf.readthedocs.io/en/latest/how-to-open-a-file.html#how-to-open-a-file
 def open(
     filename: str | Path | BufferedReader | None = None,
@@ -601,6 +649,7 @@ class Page:
     ) -> Annot: ...
     def clean_contents(self, sanitize: bool = True) -> None: ...
     def get_texttrace(self) -> list[dict[str, Any]]: ...
+    def get_drawings(self, extended: bool = False) -> list[DrawingDict]: ...
     def insert_image(
         self,
         rect: Rect,
