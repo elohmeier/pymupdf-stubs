@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, assert_type
 
 
 def test_old():
@@ -22,9 +22,15 @@ def test_new():
     doc = pymupdf.Document()
     page = doc[0]
     page.draw_rect(pymupdf.Rect([1, 2, 3, 4]))
-    drawings: list[pymupdf.DrawingDict] = page.get_drawings()
+    drawings: list[pymupdf.DrawingPathDict] = page.get_drawings()
     for drawing in drawings:
         print(drawing.get("type"))
+    drawings_extended: list[pymupdf.DrawingDict] = page.get_drawings(extended=True)
+    for drawing in drawings_extended:
+        print(drawing.get("type"))
+    assert_type(page.get_drawings(), list[pymupdf.DrawingPathDict])
+    assert_type(page.get_drawings(extended=False), list[pymupdf.DrawingPathDict])
+    assert_type(page.get_drawings(extended=True), list[pymupdf.DrawingDict])
 
     fdr = page.find_tables()
     tbl = fdr.tables[0]
