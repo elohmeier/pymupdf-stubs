@@ -5,56 +5,41 @@ ROOT=$(git rev-parse --show-toplevel)
 DRY_RUN=0
 FORCE=0
 VERSION=""
-MINOR=0
-HOTFIX=0
-
-# Function to increment version
-increment_version() {
-    local version=$1
-    local minor=$2
-    local hotfix=$3
-
-    # Check if version has a -x suffix
-    if [[ "$version" =~ ^([0-9]+\.[0-9]+\.[0-9]+)-([0-9]+)$ ]]; then
-        base_version="${BASH_REMATCH[1]}"
-        release_num="${BASH_REMATCH[2]}"
-
-        if [ "$minor" -eq 1 ]; then
-            IFS='.' read -r major minor_ver patch <<<"$base_version"
-            minor_ver=$((minor_ver + 1))
-            patch=0
-            echo "${major}.${minor_ver}.${patch}-1"
-        elif [ "$hotfix" -eq 1 ]; then
-            IFS='.' read -r major minor_ver patch <<<"$base_version"
-            patch=$((patch + 1))
-            echo "${major}.${minor_ver}.${patch}-1"
-        else
-            # Default: increment the release number
-            new_release=$((release_num + 1))
-            echo "${base_version}-${new_release}"
-        fi
-    else
-        # Handle regular version format without -x suffix
-        IFS='.' read -r major minor_ver patch <<<"$version"
-
-        if [ "$minor" -eq 1 ]; then
-            minor_ver=$((minor_ver + 1))
-            patch=0
-        elif [ "$hotfix" -eq 1 ]; then
-            patch=$((patch + 1))
-        else
-            echo "Either --minor or --hotfix must be specified when no version is provided"
-            exit 1
-        fi
-
-        echo "${major}.${minor_ver}.${patch}"
-    fi
-}
 
 # Function to get current version from pyproject.toml
 get_current_version() {
     local file="$ROOT/pyproject.toml"
     grep '^version = ' "$file" | sed 's/^version = "\(.*\)"$/\1/'
+}
+
+# Compute release version:
+# - use the pyproject version as-is if no matching tag exists
+# - otherwise append / increment a numeric -x suffix until free
+compute_auto_version() {
+    local version=$1
+    local base_version release_num candidate
+
+    if [[ "$version" =~ ^([0-9]+\.[0-9]+\.[0-9]+)-([0-9]+)$ ]]; then
+        base_version="${BASH_REMATCH[1]}"
+        release_num="${BASH_REMATCH[2]}"
+    else
+        base_version="$version"
+        release_num=0
+    fi
+
+    if ! git rev-parse "$version" >/dev/null 2>&1; then
+        echo "$version"
+        return 0
+    fi
+
+    while true; do
+        release_num=$((release_num + 1))
+        candidate="${base_version}-${release_num}"
+        if ! git rev-parse "$candidate" >/dev/null 2>&1; then
+            echo "$candidate"
+            return 0
+        fi
+    done
 }
 
 while test $# -gt 0; do
@@ -69,8 +54,6 @@ while test $# -gt 0; do
         echo "-h, --help                show brief help"
         echo "-d, --dry-run             dry run"
         echo "-f, --force               force (skip git status check)"
-        echo "--minor                   increment minor version"
-        echo "--hotfix                  increment patch version"
         exit 0
         ;;
     -d | --dry-run)
@@ -81,14 +64,6 @@ while test $# -gt 0; do
         shift
         FORCE=1
         ;;
-    --minor)
-        shift
-        MINOR=1
-        ;;
-    --hotfix)
-        shift
-        HOTFIX=1
-        ;;
     *)
         VERSION=$1
         shift
@@ -98,10 +73,7 @@ done
 
 if [ -z "$VERSION" ]; then
     current_version=$(get_current_version)
-    if ! VERSION=$(increment_version "$current_version" "$MINOR" "$HOTFIX"); then
-        echo "$VERSION"
-        exit 1
-    fi
+    VERSION=$(compute_auto_version "$current_version")
 fi
 
 TAG=$VERSION
