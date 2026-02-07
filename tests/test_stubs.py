@@ -1,3 +1,6 @@
+from typing import TYPE_CHECKING
+
+
 def test_old():
     import fitz
 
@@ -26,3 +29,19 @@ def test_new():
     fdr = page.find_tables()
     tbl = fdr.tables[0]
     print(tbl.bbox)
+
+    # Pixmap constructor/property typing coverage.
+    pix = pymupdf.Pixmap(pymupdf.csRGB, pymupdf.IRect(0, 0, 2, 2), False)
+    mask = pymupdf.Pixmap(None, pix)
+    pix2 = pymupdf.Pixmap(pix, 0)
+    pix2.set_dpi(72, 72)
+    print(
+        mask.alpha,
+        pix2.is_monochrome,
+        pix2.is_unicolor,
+        len(pix2.samples_mv),
+        pix2.samples_ptr,
+    )
+
+    if TYPE_CHECKING:
+        pymupdf.Pixmap(b"fake-image-bytes")
