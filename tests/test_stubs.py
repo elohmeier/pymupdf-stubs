@@ -1,6 +1,27 @@
 from typing import TYPE_CHECKING, assert_type
 
 
+def test_drawing_item_narrowing() -> None:
+    import pymupdf
+
+    def _assert_narrow(item: pymupdf.DrawingItem) -> None:
+        if item[0] == "l":
+            assert_type(item, pymupdf.DrawingLineItem)
+        elif item[0] == "c":
+            assert_type(item, pymupdf.DrawingCurveItem)
+        elif item[0] == "re":
+            assert_type(item, pymupdf.DrawingRectItem)
+        else:
+            assert_type(item, pymupdf.DrawingQuadItem)
+
+    _assert_narrow(("l", pymupdf.Point(), pymupdf.Point()))
+    _assert_narrow(
+        ("c", pymupdf.Point(), pymupdf.Point(), pymupdf.Point(), pymupdf.Point())
+    )
+    _assert_narrow(("re", pymupdf.Rect(), 1))
+    _assert_narrow(("qu", pymupdf.Quad()))
+
+
 def test_old():
     import fitz
 
