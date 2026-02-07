@@ -22,6 +22,46 @@ def test_drawing_item_narrowing() -> None:
     _assert_narrow(("qu", pymupdf.Quad()))
 
 
+def test_get_drawings_usage_pattern() -> None:
+    import pymupdf
+
+    doc = pymupdf.Document()
+    page = doc[0]
+
+    min_line_len = 10.0
+    h_lines: list[float] = []
+    v_lines: list[float] = []
+    header_fill_y0: float | None = None
+
+    for path in page.get_drawings():
+        fill = path.get("fill")
+        items = path.get("items")
+        if not items:
+            continue
+        for item in items:
+            if item[0] == "l":
+                assert_type(item, pymupdf.DrawingLineItem)
+                p1, p2 = item[1], item[2]
+                length = ((p2.x - p1.x) ** 2 + (p2.y - p1.y) ** 2) ** 0.5
+                if length < min_line_len:
+                    continue
+                if abs(p1.y - p2.y) < 2:
+                    h_lines.append((p1.y + p2.y) / 2)
+                elif abs(p1.x - p2.x) < 2:
+                    v_lines.append((p1.x + p2.x) / 2)
+            elif item[0] == "re":
+                assert_type(item, pymupdf.DrawingRectItem)
+                r = item[1]
+                w = abs(r.x1 - r.x0)
+                h = abs(r.y1 - r.y0)
+                if fill and w > 100 and h > 10:
+                    header_fill_y0 = r.y0
+
+    assert_type(h_lines, list[float])
+    assert_type(v_lines, list[float])
+    assert_type(header_fill_y0, float | None)
+
+
 def test_old():
     import fitz
 
