@@ -112,3 +112,12 @@ def test_new():
 
     if TYPE_CHECKING:
         pymupdf.Pixmap(b"fake-image-bytes")
+
+    # paper_rect / paper_size (issue #4)
+    assert_type(pymupdf.paper_rect("A4"), pymupdf.Rect)
+    assert_type(pymupdf.paper_size("letter"), tuple[int, int])
+
+    # show_pdf_page (issue #3)
+    src_doc = pymupdf.Document()
+    xref = page.show_pdf_page(pymupdf.Rect(0, 0, 100, 100), src_doc, pno=0)
+    assert_type(xref, int)

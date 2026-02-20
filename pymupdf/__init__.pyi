@@ -436,6 +436,8 @@ def open(
     height: float = 0,
     fontsize: float = 11,
 ) -> Document: ...
+def paper_size(s: str) -> tuple[int, int]: ...
+def paper_rect(s: str) -> Rect: ...
 
 class Document:
     @overload
@@ -954,6 +956,21 @@ class Page:
         oc: int = 0,
         overlay: bool = True,
     ) -> float: ...
+    def show_pdf_page(
+        self,
+        rect: Rect | IRect | tuple[float, float, float, float] | list[float],
+        docsrc: Document,
+        pno: int = 0,
+        keep_proportion: bool = True,
+        overlay: bool = True,
+        oc: int = 0,
+        rotate: int = 0,
+        clip: Rect
+        | IRect
+        | tuple[float, float, float, float]
+        | list[float]
+        | None = None,
+    ) -> int: ...
     @property
     def rect(self) -> Rect: ...
     def bound(self) -> Rect: ...
