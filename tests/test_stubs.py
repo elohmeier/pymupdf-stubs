@@ -126,3 +126,26 @@ def test_new():
     assert_type(page.xref, int)
     obj_str = doc.xref_object(page.xref)
     assert_type(obj_str, str)
+
+    # 1.27 additions
+    doc.repair()
+    doc.save("out.pdf", raise_on_repair=True)
+    assert_type(doc.write(raise_on_repair=True), bytes)
+
+    annot = page.add_redact_annot(pymupdf.Rect(0, 0, 10, 10))
+    assert_type(bool(annot), bool)
+
+    assert_type(pymupdf.TEXT_FUZZY_VECTORS, int)
+
+    # Document methods (moved from utils.py)
+    assert_type(doc.get_toc(), list)
+    assert_type(doc.has_annots(), bool)
+    assert_type(doc.has_links(), bool)
+    assert_type(doc.get_page_labels(), list)
+    assert_type(doc.get_page_numbers("1"), list[int])
+    doc.set_metadata({"title": "test"})
+    doc.set_page_labels([])
+    assert_type(doc.set_toc([]), int)
+    assert_type(doc.subset_fonts(), int | None)
+    for p in doc.pages():
+        assert_type(p, pymupdf.Page)

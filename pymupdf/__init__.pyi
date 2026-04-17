@@ -1,3 +1,4 @@
+import collections.abc
 import types
 from collections.abc import Iterator, Sequence
 from io import BufferedReader, BytesIO
@@ -12,6 +13,7 @@ PDF_REDACT_IMAGE_PIXELS = 2
 PDF_REDACT_LINE_ART_IF_TOUCHED = 2
 PDF_REDACT_LINE_ART_NONE = 0
 PDF_REDACT_TEXT_REMOVE = 0
+TEXT_FUZZY_VECTORS: int
 
 class Colorspace:
     @property
@@ -507,7 +509,9 @@ class Document:
         owner_pw: str | None = None,
         user_pw: str | None = None,
         use_objstms: int = 0,
+        raise_on_repair: bool = False,
     ) -> None: ...
+    def repair(self) -> None: ...
     def close(self) -> None: ...
     def __getitem__(self, index: int) -> Page: ...
     def convert_to_pdf(self, from_page=-1, to_page=-1, rotate=0) -> bytes: ...
@@ -550,6 +554,7 @@ class Document:
         preserve_metadata=1,
         use_objstms=0,
         compression_effort=0,
+        raise_on_repair=False,
     ) -> bytes: ...
     def xref_object(self, xref: int, compressed: int = 0, ascii: int = 0) -> str: ...
     def scrub(
@@ -568,8 +573,89 @@ class Document:
         thumbnails: bool = True,
         xml_metadata: bool = True,
     ) -> None: ...
+    def get_char_widths(
+        self, xref: int, limit: int = 256, idx: int = 0, fontdict: dict | None = None
+    ) -> list: ...
+    def get_oc(self, xref: int) -> int: ...
+    def get_ocmd(self, xref: int) -> dict: ...
+    def get_page_labels(self) -> list: ...
+    def get_page_numbers(self, label: str, only_one: bool = False) -> list[int]: ...
+    def get_page_pixmap(
+        self,
+        pno: int,
+        *,
+        matrix: Matrix | None = None,
+        dpi: int | None = None,
+        colorspace: Colorspace | None = None,
+        clip: Rect | IRect | tuple[float, float, float, float] | None = None,
+        alpha: bool = False,
+        annots: bool = True,
+    ) -> Pixmap: ...
+    def get_page_text(
+        self,
+        pno: int,
+        option: str = "text",
+        clip: Rect | IRect | tuple[float, float, float, float] | None = None,
+        flags: int | None = None,
+        textpage: TextPage | None = None,
+        sort: bool = False,
+    ) -> Any: ...
+    def get_toc(self, simple: bool = True) -> list: ...
+    def has_annots(self) -> bool: ...
+    def has_links(self) -> bool: ...
+    def insert_page(
+        self,
+        pno: int,
+        text: str | list | None = None,
+        fontsize: float = 11,
+        width: float = 595,
+        height: float = 842,
+        fontname: str = "helv",
+        fontfile: str | None = None,
+        color: tuple[float, ...] | None = (0,),
+    ) -> int: ...
+    def pages(
+        self,
+        start: int | None = None,
+        stop: int | None = None,
+        step: int | None = None,
+    ) -> collections.abc.Iterable[Page]: ...
+    def search_page_for(
+        self,
+        pno: int,
+        text: str,
+        quads: bool = False,
+        clip: Rect | IRect | tuple[float, float, float, float] | None = None,
+        flags: int | None = None,
+        textpage: TextPage | None = None,
+    ) -> list: ...
+    def set_metadata(self, m: dict | None = None) -> None: ...
+    def set_oc(self, xref: int, oc: int) -> None: ...
+    def set_ocmd(
+        self,
+        xref: int = 0,
+        ocgs: list | None = None,
+        policy: str | None = None,
+        ve: list | None = None,
+    ) -> int: ...
+    def set_page_labels(self, labels: list) -> None: ...
+    def set_toc(self, toc: list, collapse: int = 1) -> int: ...
+    def set_toc_item(
+        self,
+        idx: int,
+        dest_dict: dict | None = None,
+        kind: int | None = None,
+        pno: int | None = None,
+        uri: str | None = None,
+        title: str | None = None,
+        to: Point | tuple[float, float] | None = None,
+        filename: str | None = None,
+        zoom: float = 0,
+    ) -> None: ...
+    def subset_fonts(self, verbose: bool = False, fallback: bool = False) -> int | None: ...
 
-class Annot: ...
+class Annot:
+    def __bool__(self) -> bool: ...
 
 class TextPage:
     def extractText(self, sort: bool = False) -> str: ...
