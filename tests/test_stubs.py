@@ -121,3 +121,8 @@ def test_new():
     src_doc = pymupdf.Document()
     xref = page.show_pdf_page(pymupdf.Rect(0, 0, 100, 100), src_doc, pno=0)
     assert_type(xref, int)
+
+    # xref_object and Page.xref
+    assert_type(page.xref, int)
+    obj_str = doc.xref_object(page.xref)
+    assert_type(obj_str, str)
