@@ -20,7 +20,7 @@ wheels = [
 
 [[package]]
 name = "pymupdf-stubs"
-version = "1.27.2.2"
+version = "1.27.2.2.post1"
 source = { editable = "." }
 dependencies = [
     { name = "pymupdf" },

@@ -1,6 +1,6 @@
 [project]
 name = "pymupdf-stubs"
-version = "1.27.2.2"
+version = "1.27.2.2-1"
 description = "Type stubs for PyMuPDF (fitz), automatically generated"
 readme = "README.md"
 license = { text = "Apache-2.0" }
