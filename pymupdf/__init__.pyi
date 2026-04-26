@@ -296,6 +296,17 @@ class IRect:
     def __iter__(self) -> Iterator[int]: ...
     def is_valid(self) -> bool: ...
 
+RectLike = (
+    Rect
+    | IRect
+    | tuple[int | float, int | float, int | float, int | float]
+    | Sequence[int | float]
+)
+PointLike = Point | tuple[int | float, int | float] | Sequence[int | float]
+MatrixTuple = tuple[float, float, float, float, float, float]
+TextBlock = tuple[float, float, float, float, str, int, int]
+TextWord = tuple[float, float, float, float, str, int, int, int]
+
 ExtractImageDict = TypedDict(
     "ExtractImageDict",
     {
@@ -363,21 +374,53 @@ class TextBlockDict(TypedDict):
     bbox: tuple[float, float, float, float]
     lines: list[TextLineDict]
 
+class TextImageBlockDict(TypedDict):
+    number: int
+    type: int
+    bbox: tuple[float, float, float, float]
+    width: int
+    height: int
+    ext: str
+    colorspace: int
+    xres: int
+    yres: int
+    bpc: int
+    size: int
+    image: bytes
+    mask: bytes | None
+    transform: MatrixTuple
+
 class TextBlockRawDict(TypedDict):
     number: int
     type: int
     bbox: tuple[float, float, float, float]
     lines: list[TextLineRawDict]
 
+class TextImageBlockRawDict(TypedDict):
+    number: int
+    type: int
+    bbox: tuple[float, float, float, float]
+    width: int
+    height: int
+    ext: str
+    colorspace: int
+    xres: int
+    yres: int
+    bpc: int
+    size: int
+    image: bytes
+    mask: bytes | None
+    transform: MatrixTuple
+
 class TextPageDict(TypedDict):
     width: float
     height: float
-    blocks: list[TextBlockDict]
+    blocks: list[TextBlockDict | TextImageBlockDict]
 
 class TextPageRawDict(TypedDict):
     width: float
     height: float
-    blocks: list[TextBlockRawDict]
+    blocks: list[TextBlockRawDict | TextImageBlockRawDict]
 
 DrawingLineItem = tuple[Literal["l"], Point, Point]
 DrawingCurveItem = tuple[Literal["c"], Point, Point, Point, Point]
@@ -513,7 +556,12 @@ class Document:
     ) -> None: ...
     def repair(self) -> None: ...
     def close(self) -> None: ...
+    @overload
     def __getitem__(self, index: int) -> Page: ...
+    @overload
+    def __getitem__(self, index: slice) -> list[Page]: ...
+    @overload
+    def __getitem__(self, index: tuple[int, int]) -> Page: ...
     def convert_to_pdf(self, from_page=-1, to_page=-1, rotate=0) -> bytes: ...
     def new_page(
         self, pno: int = -1, width: float = 595, height: float = 842
@@ -526,6 +574,7 @@ class Document:
         traceback: types.TracebackType | None,
     ) -> None: ...
     def extract_image(self, xref: int) -> ExtractImageDict: ...
+    def load_page(self, page_id: int | tuple[int, int] | None = 0) -> Page: ...
     def reload_page(self, page: Page) -> Page: ...
     @property
     def needs_pass(self) -> bool: ...
@@ -591,15 +640,83 @@ class Document:
         alpha: bool = False,
         annots: bool = True,
     ) -> Pixmap: ...
+    @overload
+    def get_page_text(
+        self,
+        pno: int,
+        option: Literal["text"] = "text",
+        clip: RectLike | None = None,
+        flags: int | None = None,
+        textpage: TextPage | None = None,
+        sort: bool = False,
+        delimiters: str | None = None,
+    ) -> str: ...
+    @overload
+    def get_page_text(
+        self,
+        pno: int,
+        option: Literal["html", "xml", "xhtml", "json", "rawjson"],
+        clip: RectLike | None = None,
+        flags: int | None = None,
+        textpage: TextPage | None = None,
+        sort: bool = False,
+        delimiters: str | None = None,
+    ) -> str: ...
+    @overload
+    def get_page_text(
+        self,
+        pno: int,
+        option: Literal["dict"],
+        clip: RectLike | None = None,
+        flags: int | None = None,
+        textpage: TextPage | None = None,
+        sort: bool = False,
+        delimiters: str | None = None,
+    ) -> TextPageDict: ...
+    @overload
+    def get_page_text(
+        self,
+        pno: int,
+        option: Literal["rawdict"],
+        clip: RectLike | None = None,
+        flags: int | None = None,
+        textpage: TextPage | None = None,
+        sort: bool = False,
+        delimiters: str | None = None,
+    ) -> TextPageRawDict: ...
+    @overload
+    def get_page_text(
+        self,
+        pno: int,
+        option: Literal["words"],
+        clip: RectLike | None = None,
+        flags: int | None = None,
+        textpage: TextPage | None = None,
+        sort: bool = False,
+        delimiters: str | None = None,
+    ) -> list[TextWord]: ...
+    @overload
+    def get_page_text(
+        self,
+        pno: int,
+        option: Literal["blocks"],
+        clip: RectLike | None = None,
+        flags: int | None = None,
+        textpage: TextPage | None = None,
+        sort: bool = False,
+        delimiters: str | None = None,
+    ) -> list[TextBlock]: ...
+    @overload
     def get_page_text(
         self,
         pno: int,
         option: str = "text",
-        clip: Rect | IRect | tuple[float, float, float, float] | None = None,
+        clip: RectLike | None = None,
         flags: int | None = None,
         textpage: TextPage | None = None,
         sort: bool = False,
-    ) -> Any: ...
+        delimiters: str | None = None,
+    ) -> str | TextPageDict | TextPageRawDict | list[TextWord] | list[TextBlock]: ...
     def get_toc(self, simple: bool = True) -> list: ...
     def has_annots(self) -> bool: ...
     def has_links(self) -> bool: ...
@@ -652,7 +769,9 @@ class Document:
         filename: str | None = None,
         zoom: float = 0,
     ) -> None: ...
-    def subset_fonts(self, verbose: bool = False, fallback: bool = False) -> int | None: ...
+    def subset_fonts(
+        self, verbose: bool = False, fallback: bool = False
+    ) -> int | None: ...
 
 class Annot:
     def __bool__(self) -> bool: ...
@@ -662,17 +781,23 @@ class TextPage:
     def extractTEXT(self, sort: bool = False) -> str: ...
     def extractBLOCKS(
         self,
-    ) -> list[tuple[float, float, float, float, str, int, int]]: ...
-    def extractWORDS(
-        self, delimiters: str | None = None
-    ) -> list[tuple[float, float, float, float, str, int, int, int]]: ...
+    ) -> list[TextBlock]: ...
+    def extractWORDS(self, delimiters: str | None = None) -> list[TextWord]: ...
     def extractHTML(self) -> str: ...
-    def extractDICT(self, sort: bool = False) -> TextPageDict: ...
-    def extractJSON(self, sort: bool = False) -> str: ...
+    def extractDICT(
+        self, cb: Rect | None = None, sort: bool = False
+    ) -> TextPageDict: ...
+    def extractJSON(self, cb: Rect | None = None, sort: bool = False) -> str: ...
     def extractXHTML(self) -> str: ...
     def extractXML(self) -> str: ...
-    def extractRAWDICT(self, sort: bool = False) -> TextPageRawDict: ...
-    def extractRAWJSON(self, sort: bool = False) -> str: ...
+    def extractRAWDICT(
+        self, cb: Rect | None = None, sort: bool = False
+    ) -> TextPageRawDict: ...
+    def extractRAWJSON(self, cb: Rect | None = None, sort: bool = False) -> str: ...
+    def extractTextbox(self, rect: RectLike) -> str: ...
+    def extractSelection(self, pointa: PointLike, pointb: PointLike) -> str: ...
+    def extractIMGINFO(self, hashes: int = 0) -> list[dict[str, Any]]: ...
+    def poolsize(self) -> int: ...
     @overload
     def search(self, needle: str, quads: Literal[False] = False) -> list[Rect]: ...
     @overload
@@ -693,13 +818,18 @@ class Page:
         annots=True,
     ) -> Pixmap: ...
     def set_rotation(self, rotation: int) -> None: ...
-    def get_textpage(self, clip: Rect | IRect | None = None) -> TextPage: ...
+    def get_textpage(
+        self,
+        clip: RectLike | None = None,
+        flags: int = 0,
+        matrix: Matrix | None = None,
+    ) -> TextPage: ...
     @overload
     def get_text(
         self,
         option: Literal["text"] = "text",
         *,
-        clip: Rect | None = None,
+        clip: RectLike | None = None,
         flags: int | None = None,
         textpage: TextPage | None = None,
         sort: bool = False,
@@ -708,14 +838,69 @@ class Page:
     @overload
     def get_text(
         self,
-        option: str,
+        option: Literal["html", "xml", "xhtml", "json", "rawjson"],
         *,
-        clip: Rect | None = None,
+        clip: RectLike | None = None,
         flags: int | None = None,
         textpage: TextPage | None = None,
         sort: bool = False,
         delimiters: str | None = None,
-    ) -> str | list | dict: ...
+    ) -> str: ...
+    @overload
+    def get_text(
+        self,
+        option: Literal["dict"],
+        *,
+        clip: RectLike | None = None,
+        flags: int | None = None,
+        textpage: TextPage | None = None,
+        sort: bool = False,
+        delimiters: str | None = None,
+    ) -> TextPageDict: ...
+    @overload
+    def get_text(
+        self,
+        option: Literal["rawdict"],
+        *,
+        clip: RectLike | None = None,
+        flags: int | None = None,
+        textpage: TextPage | None = None,
+        sort: bool = False,
+        delimiters: str | None = None,
+    ) -> TextPageRawDict: ...
+    @overload
+    def get_text(
+        self,
+        option: Literal["words"],
+        *,
+        clip: RectLike | None = None,
+        flags: int | None = None,
+        textpage: TextPage | None = None,
+        sort: bool = False,
+        delimiters: str | None = None,
+    ) -> list[TextWord]: ...
+    @overload
+    def get_text(
+        self,
+        option: Literal["blocks"],
+        *,
+        clip: RectLike | None = None,
+        flags: int | None = None,
+        textpage: TextPage | None = None,
+        sort: bool = False,
+        delimiters: str | None = None,
+    ) -> list[TextBlock]: ...
+    @overload
+    def get_text(
+        self,
+        option: str,
+        *,
+        clip: RectLike | None = None,
+        flags: int | None = None,
+        textpage: TextPage | None = None,
+        sort: bool = False,
+        delimiters: str | None = None,
+    ) -> str | TextPageDict | TextPageRawDict | list[TextWord] | list[TextBlock]: ...
     def find_tables(
         self,
         clip: Rect

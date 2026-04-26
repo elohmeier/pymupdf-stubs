@@ -82,6 +82,8 @@ def test_new():
 
     doc = pymupdf.Document()
     page = doc[0]
+    page_by_chapter = doc[(0, 0)]
+    page_slice = doc[:1]
     page.draw_rect(pymupdf.Rect([1, 2, 3, 4]))
     drawings: list[pymupdf.DrawingPathDict] = page.get_drawings()
     for drawing in drawings:
@@ -92,6 +94,10 @@ def test_new():
     assert_type(page.get_drawings(), list[pymupdf.DrawingPathDict])
     assert_type(page.get_drawings(extended=False), list[pymupdf.DrawingPathDict])
     assert_type(page.get_drawings(extended=True), list[pymupdf.DrawingDict])
+    assert_type(page_by_chapter, pymupdf.Page)
+    assert_type(page_slice, list[pymupdf.Page])
+    assert_type(doc.load_page(), pymupdf.Page)
+    assert_type(doc.load_page((0, 0)), pymupdf.Page)
 
     fdr = page.find_tables()
     tbl = fdr.tables[0]
@@ -126,6 +132,27 @@ def test_new():
     assert_type(page.xref, int)
     obj_str = doc.xref_object(page.xref)
     assert_type(obj_str, str)
+
+    textpage = page.get_textpage(flags=0, matrix=pymupdf.Identity)
+    assert_type(textpage, pymupdf.TextPage)
+    assert_type(page.get_text(), str)
+    assert_type(page.get_text("html"), str)
+    assert_type(page.get_text("dict"), pymupdf.TextPageDict)
+    assert_type(page.get_text("rawdict"), pymupdf.TextPageRawDict)
+    assert_type(page.get_text("words"), list[pymupdf.TextWord])
+    assert_type(page.get_text("blocks"), list[pymupdf.TextBlock])
+    assert_type(doc.get_page_text(0), str)
+    assert_type(doc.get_page_text(0, "dict"), pymupdf.TextPageDict)
+    assert_type(doc.get_page_text(0, "rawdict"), pymupdf.TextPageRawDict)
+    assert_type(doc.get_page_text(0, "words"), list[pymupdf.TextWord])
+    assert_type(doc.get_page_text(0, "blocks"), list[pymupdf.TextBlock])
+    assert_type(textpage.extractDICT(), pymupdf.TextPageDict)
+    assert_type(textpage.extractRAWDICT(), pymupdf.TextPageRawDict)
+    assert_type(textpage.extractTextbox(pymupdf.Rect(0, 0, 10, 10)), str)
+    assert_type(
+        textpage.extractSelection(pymupdf.Point(0, 0), pymupdf.Point(1, 1)), str
+    )
+    assert_type(textpage.poolsize(), int)
 
     # 1.27 additions
     doc.repair()
