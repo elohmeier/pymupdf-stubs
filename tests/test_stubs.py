@@ -170,9 +170,23 @@ def test_new():
     assert_type(doc.has_links(), bool)
     assert_type(doc.get_page_labels(), list)
     assert_type(doc.get_page_numbers("1"), list[int])
+    select_result = doc.select([0])
+    assert_type(select_result, None)
     doc.set_metadata({"title": "test"})
     doc.set_page_labels([])
     assert_type(doc.set_toc([]), int)
     assert_type(doc.subset_fonts(), int | None)
     for p in doc.pages():
         assert_type(p, pymupdf.Page)
+        assert_type(p.mediabox, pymupdf.Rect)
+        assert_type(p.mediabox_size, pymupdf.Point)
+        assert_type(p.cropbox, pymupdf.Rect)
+        assert_type(p.cropbox_position, pymupdf.Point)
+        assert_type(p.bleedbox, pymupdf.Rect)
+        assert_type(p.trimbox, pymupdf.Rect)
+
+    table_finder = page.find_tables()
+    table = table_finder.tables[0]
+    assert_type(table.header.bbox, tuple[float, float, float, float])
+    assert_type(table.header.names, list[str])
+    assert_type(table.header.external, bool)
