@@ -190,3 +190,17 @@ def test_new():
     assert_type(table.header.bbox, tuple[float, float, float, float])
     assert_type(table.header.names, list[str])
     assert_type(table.header.external, bool)
+
+    # 1.28: Archive
+    arch = pymupdf.Archive()
+    assert_type(arch.entry_list, list[dict[str, object]])
+    assert_type(arch.has_entry("name"), bool)
+    assert_type(arch.read_entry("name"), bytes)
+    assert_type(arch.add(b"data", "path"), None)
+
+    # 1.28: apply_css
+    assert_type(doc.apply_css("body {}"), None)
+    assert_type(doc.apply_css("body {}", append=False), None)
+
+    # 1.28: Document archive parameter
+    assert_type(pymupdf.Document(archive=pymupdf.Archive()), pymupdf.Document)
