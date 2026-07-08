@@ -13,7 +13,6 @@
 
 ## Releasing
 
-- Use `scripts/create-release.sh` to create releases.
-- It auto-computes the next version, updates `pyproject.toml`, commits, tags, pushes, and creates a GitHub release.
-- Accepts optional version argument; otherwise increments from current `pyproject.toml` version.
-- Flags: `-d` / `--dry-run`, `-f` / `--force` (skip clean-tree check).
+- Releases are automated by `.github/workflows/publish.yml`.
+- Pushes to `main` that change package-relevant files run `uv run ty check`, compute the next release version, create the GitHub release, build, and publish.
+- A weekly scheduled run checks PyPI for a newer `pymupdf` release, updates the stub package version/dependency/lockfile, validates with `uv run ty check`, then releases and publishes if validation passes.

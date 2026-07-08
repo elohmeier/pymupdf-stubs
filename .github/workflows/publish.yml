@@ -1,18 +1,30 @@
-name: "Publish"
+name: "Release"
 
 on:
-  release:
-    types: ["published"]
+  push:
+    branches: ["main"]
+  schedule:
+    - cron: "17 5 * * 1"
+  workflow_dispatch:
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  id-token: write
 
 jobs:
-  run:
-    name: "Build and publish release"
+  release:
+    name: "Test, release, and publish"
     runs-on: ubuntu-latest
-    permissions:
-      id-token: write
+    if: github.event_name != 'push' || !startsWith(github.event.head_commit.message, 'release ')
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Install uv
         uses: astral-sh/setup-uv@v5
@@ -23,8 +35,197 @@ jobs:
       - name: Set up Python
         run: uv python install 3.12
 
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Prepare release
+        id: prepare
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BEFORE_SHA: ${{ github.event.before }}
+        run: |
+          uv run python <<'PY'
+          import json
+          import os
+          import re
+          import subprocess
+          import tomllib
+          import urllib.request
+          from pathlib import Path
+
+          pyproject_path = Path("pyproject.toml")
+          pyproject = pyproject_path.read_text()
+          project = tomllib.loads(pyproject)["project"]
+          current_version = project["version"]
+          event_name = os.environ["EVENT_NAME"]
+
+          def run(*args: str) -> str:
+              return subprocess.check_output(args, text=True).strip()
+
+          def output(name: str, value: str) -> None:
+              with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as f:
+                  f.write(f"{name}={value}\n")
+
+          def base_version(version: str) -> str:
+              return re.sub(r"-\d+$", "", version)
+
+          def version_key(version: str) -> tuple[int, ...]:
+              return tuple(int(part) for part in base_version(version).split("."))
+
+          def tag_exists(tag: str) -> bool:
+              return subprocess.run(
+                  ["git", "rev-parse", "--verify", "--quiet", f"refs/tags/{tag}"],
+                  check=False,
+                  stdout=subprocess.DEVNULL,
+                  stderr=subprocess.DEVNULL,
+              ).returncode == 0
+
+          def next_release_version(version: str) -> str:
+              base = base_version(version)
+              suffix = 0
+              match = re.fullmatch(r"(.+)-(\d+)", version)
+              if match:
+                  base = match.group(1)
+                  suffix = int(match.group(2))
+              if not tag_exists(version):
+                  return version
+              while True:
+                  suffix += 1
+                  candidate = f"{base}-{suffix}"
+                  if not tag_exists(candidate):
+                      return candidate
+
+          def latest_pymupdf_version() -> str:
+              with urllib.request.urlopen("https://pypi.org/pypi/pymupdf/json", timeout=30) as response:
+                  data = json.load(response)
+              return data["info"]["version"]
+
+          def set_project_version(version: str) -> None:
+              global pyproject
+              pyproject = re.sub(
+                  r'^version = ".*"$',
+                  f'version = "{version}"',
+                  pyproject,
+                  count=1,
+                  flags=re.MULTILINE,
+              )
+
+          def set_pymupdf_upper_bound(latest: str) -> None:
+              global pyproject
+              parts = version_key(latest)
+              if len(parts) < 2:
+                  return
+              upper = f"{parts[0]}.{parts[1] + 1}.0"
+              pyproject = re.sub(
+                  r'"pymupdf([^"]*)"',
+                  lambda m: re.sub(r"<[0-9][^, \"]*", f"<{upper}", m.group(0)),
+                  pyproject,
+                  count=1,
+              )
+
+          release_reason = ""
+          target_version = current_version
+
+          if event_name == "push":
+              before = os.environ.get("BEFORE_SHA", "")
+              changed_files: list[str]
+              if before and not re.fullmatch(r"0+", before):
+                  changed_files = run("git", "diff", "--name-only", before, "HEAD").splitlines()
+              else:
+                  changed_files = run("git", "diff", "--name-only", "HEAD^", "HEAD").splitlines()
+              relevant_prefixes = ("fitz/", "pymupdf/", "tests/")
+              relevant_files = {"pyproject.toml", "uv.lock"}
+              relevant = [
+                  path for path in changed_files
+                  if path.startswith(relevant_prefixes) or path in relevant_files
+              ]
+              if not relevant:
+                  output("release", "false")
+                  output("reason", "No package-relevant files changed.")
+                  raise SystemExit
+              target_version = next_release_version(current_version)
+              release_reason = "main branch package change"
+          else:
+              upstream_version = latest_pymupdf_version()
+              if version_key(upstream_version) <= version_key(current_version):
+                  output("release", "false")
+                  output("reason", f"PyMuPDF {upstream_version} is not newer than stub base {base_version(current_version)}.")
+                  raise SystemExit
+              target_version = upstream_version
+              set_pymupdf_upper_bound(upstream_version)
+              release_reason = f"PyMuPDF {upstream_version}"
+
+          set_project_version(target_version)
+          pyproject_path.write_text(pyproject)
+          subprocess.check_call(["uv", "lock", "--upgrade-package", "pymupdf"])
+
+          output("release", "true")
+          output("version", target_version)
+          output("reason", release_reason)
+          PY
+
+      - name: No release needed
+        if: steps.prepare.outputs.release != 'true'
+        run: echo "${{ steps.prepare.outputs.reason }}"
+
+      - name: Validate stubs
+        if: steps.prepare.outputs.release == 'true'
+        run: uv run ty check
+
+      - name: Commit release metadata
+        if: steps.prepare.outputs.release == 'true'
+        run: |
+          if ! git diff --quiet -- pyproject.toml uv.lock; then
+            git add pyproject.toml uv.lock
+            git commit -m "release ${{ steps.prepare.outputs.version }}"
+          fi
+
+      - name: Create tag and GitHub release
+        if: steps.prepare.outputs.release == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if git rev-parse --verify --quiet "refs/tags/${{ steps.prepare.outputs.version }}"; then
+            git push origin HEAD:main
+          else
+            git tag -a "${{ steps.prepare.outputs.version }}" -m "release ${{ steps.prepare.outputs.version }}"
+            git push --atomic origin HEAD:main "${{ steps.prepare.outputs.version }}"
+          fi
+
+          if gh release view "${{ steps.prepare.outputs.version }}" >/dev/null 2>&1; then
+            echo "GitHub release ${{ steps.prepare.outputs.version }} already exists."
+          else
+            gh release create "${{ steps.prepare.outputs.version }}" --latest --verify-tag --generate-notes --notes "Automated release for ${{ steps.prepare.outputs.reason }}."
+          fi
+
       - name: Build
+        if: steps.prepare.outputs.release == 'true'
         run: uv build
 
+      - name: Check PyPI
+        if: steps.prepare.outputs.release == 'true'
+        id: pypi
+        env:
+          VERSION: ${{ steps.prepare.outputs.version }}
+        run: |
+          uv run python <<'PY'
+          import json
+          import os
+          import re
+          import urllib.request
+
+          version = os.environ["VERSION"]
+          normalized = re.sub(r"-(\d+)$", r".post\1", version)
+          with urllib.request.urlopen("https://pypi.org/pypi/pymupdf-stubs/json", timeout=30) as response:
+              releases = json.load(response)["releases"]
+
+          exists = str(normalized in releases).lower()
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as f:
+              f.write(f"exists={exists}\n")
+          PY
+
       - name: Publish
+        if: steps.prepare.outputs.release == 'true' && steps.pypi.outputs.exists != 'true'
         run: uv publish
